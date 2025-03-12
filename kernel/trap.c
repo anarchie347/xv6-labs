@@ -49,7 +49,29 @@ usertrap(void)
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
-  
+
+  if((r_scause() == 12) || (r_scause() == 13) | (r_scause() == 15)) {
+    //page fault
+    int fault_addr = r_stval();
+
+    if (fault_addr >= p->sz || fault_addr < PGROUNDDOWN(p->trapframe->sp)) {
+        //invalid mem access
+        printf("Seg fault: addr=0x%d\n", fault_addr);
+        p->killed = 1;
+        return;
+    }
+    
+    int malloc_return = uvmalloc(p->pagetable, p->sz, p->sz + PGSIZE, PTE_W | PTE_U);
+    if (malloc_return == 0) {
+        printf("malloc failed\n");
+        p->killed = 1;
+        return;
+    }
+    p->sz += PGSIZE;
+
+
+  }
+
   if(r_scause() == 8){
     // system call
 
