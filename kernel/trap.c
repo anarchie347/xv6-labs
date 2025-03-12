@@ -50,10 +50,11 @@ usertrap(void)
   // save user program counter.
   p->trapframe->epc = r_sepc();
 
+  //page fault - demand paging
   if((r_scause() == 12) || (r_scause() == 13) | (r_scause() == 15)) {
     //page fault
     int fault_addr = r_stval();
-
+    printf("page faulted\n")
     if (fault_addr >= p->sz || fault_addr < PGROUNDDOWN(p->trapframe->sp)) {
         //invalid mem access
         printf("Seg fault: addr=0x%d\n", fault_addr);
@@ -68,7 +69,7 @@ usertrap(void)
         return;
     }
     p->sz += PGSIZE;
-
+    printf("memory expansion successful\n");
 
   }
 

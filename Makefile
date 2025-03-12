@@ -197,6 +197,7 @@ UPROGS=\
     $U/_sleep\
     $U/_pingpong\
     $U/_mypingworld\
+    $U/_demandpagetest\
 
 ifeq ($(LAB),syscall)
 UPROGS += \
