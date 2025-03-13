@@ -29,6 +29,46 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
+void demandpaging() {
+    //page fault
+    struct proc *p = myproc();
+    uint fault_addr = PGROUNDDOWN(r_stval());
+    printf("page faulted\n");
+    if (fault_addr >= p->sz || fault_addr < PGROUNDDOWN(p->trapframe->sp)) {
+        //invalid mem access
+        printf("Seg fault: addr=0x%d\n", fault_addr);
+        p->killed = 1;
+        return;
+    }
+    
+//    int malloc_return = uvmalloc(p->pagetable, p->sz, p->sz + PGSIZE, PTE_W | PTE_U);
+//    if (malloc_return == 0) {
+//        printf("malloc failed\n");
+//        p->killed = 1;
+//        return;
+//    }
+//    p->sz += PGSIZE;
+  
+    char *mem = kalloc();
+    if (mem ==0) {
+        printf("Out of mem handling page fault");
+        p->killed = 1;
+        return;
+    }
+    memset(mem,0,PGSIZE);
+    if (mappages(p->pagetable, fault_addr, PGSIZE, (uint64)mem,PTE_W|PTE_U) != 0) {
+        printf("Mappages failed");
+        kfree(mem);
+        p->killed = 1;
+        return;
+    }
+
+
+
+    printf("memory expansion successful\n");
+}
+
+
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
@@ -51,26 +91,10 @@ usertrap(void)
   p->trapframe->epc = r_sepc();
 
   //page fault - demand paging
-  if((r_scause() == 12) || (r_scause() == 13) | (r_scause() == 15)) {
-    //page fault
-    int fault_addr = r_stval();
-    printf("page faulted\n");
-    if (fault_addr >= p->sz || fault_addr < PGROUNDDOWN(p->trapframe->sp)) {
-        //invalid mem access
-        printf("Seg fault: addr=0x%d\n", fault_addr);
-        p->killed = 1;
-        return;
-    }
-    
-    int malloc_return = uvmalloc(p->pagetable, p->sz, p->sz + PGSIZE, PTE_W | PTE_U);
-    if (malloc_return == 0) {
-        printf("malloc failed\n");
-        p->killed = 1;
-        return;
-    }
-    p->sz += PGSIZE;
-    printf("memory expansion successful\n");
-
+  if ((r_scause() == 14) | (r_scause() == 15) | (r_scause() == 12)) {
+  //if((r_scause() == 12) || (r_scause() == 13) | (r_scause() == 15)) {
+    demandpaging();
+    return;
   }
 
   if(r_scause() == 8){
@@ -167,11 +191,20 @@ kerneltrap()
   if(intr_get() != 0)
     panic("kerneltrap: interrupts enabled");
 
+  //page fault - demand paging
+  if ((r_scause() == 14) | (r_scause() == 15) | (r_scause() == 12)) {
+  //if((r_scause() == 12) || (r_scause() == 13) | (r_scause() == 15)) {
+    demandpaging();
+    return;
+  }
+
   if((which_dev = devintr()) == 0){
     // interrupt or trap from an unknown source
     printf("scause=0x%lx sepc=0x%lx stval=0x%lx\n", scause, r_sepc(), r_stval());
     panic("kerneltrap");
   }
+
+
 
   // give up the CPU if this is a timer interrupt.
   if(which_dev == 2 && myproc() != 0)
