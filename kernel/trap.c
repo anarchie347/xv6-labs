@@ -34,9 +34,14 @@ void demandpaging() {
     struct proc *p = myproc();
     uint fault_addr = PGROUNDDOWN(r_stval());
     printf("page faulted\n");
-    if (fault_addr >= p->sz || fault_addr < PGROUNDDOWN(p->trapframe->sp)) {
-        //invalid mem access
-        printf("Seg fault: addr=0x%d\n", fault_addr);
+//    if (fault_addr >= p->sz || fault_addr < PGROUNDDOWN(p->trapframe->sp)) {
+//        //invalid mem access
+//        printf("Seg fault: addr=0x%d\n", fault_addr);
+//        p->killed = 1;
+//        return;
+//    }
+    if (fault_addr >= p->sz) {
+        printf("Page fault, inalid address");
         p->killed = 1;
         return;
     }
@@ -48,7 +53,6 @@ void demandpaging() {
 //        return;
 //    }
 //    p->sz += PGSIZE;
-  
     char *mem = kalloc();
     if (mem ==0) {
         printf("Out of mem handling page fault");
@@ -62,7 +66,7 @@ void demandpaging() {
         p->killed = 1;
         return;
     }
-
+    
 
 
     printf("memory expansion successful\n");
