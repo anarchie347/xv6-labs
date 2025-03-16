@@ -66,7 +66,7 @@ void demandpaging() {
         p->killed = 1;
         return;
     }
-    
+    p->sz += PGSIZE; 
 
 
     printf("memory expansion successful\n");
